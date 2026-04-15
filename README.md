@@ -41,43 +41,20 @@ available types:
 git clone https://github.com/jsphu/argparser-bash argparser_bash
 cd argparser_bash
 # either add to your PATH
-export PATH=$PATH:/path/to/file/argparser
+export PATH=$PATH:/path/to/file/argparser_bash
 # or simply move to your local bin
-mv argparser ~/.local/bin/
+mv argparser.bash ~/.local/bin/argparser
 # or add a symlink of it
-ln -s /path/to/file/argparser ~/.local/bin/
-```
-
-### Install
-
-Add this to your .**bashrc** or source it before using **argparser**
-
-```bash
-function argparser {
-  local PARSER="/path/to/your/argparser" # < locate your own parser
-  local OPTIONS="-o"                      # < change parser options here
-  local OPTSTR=$1 OPTNAM=$2
-  if [[ -z $OPTSTR || -z $OPTNAM ]]; then
-    $PARSER -h
-    return 2
-  fi
-  shift 2
-  c=$($PARSER $OPTIONS "$OPTSTR" "$OPTNAM" "$OPTIND" "$@")
-  eval "$c"
-  if [[ ${!OPTNAM} == "+" ]]; then
-    ((OPTIND--))
-    return 1
-  elif [[ $c =~ $';[^;]*false[[:space:]]*$' ]]; then
-    return 1
-  fi
-}
-
+ln -s /path/to/file/argparser.bash ~/.local/bin/argparser
+# or add this to your .bashrc
+[[ -f /path/to/argparser.bash ]] && source /path/to/argparser.bash
 ```
 
 ### Example Usage
 
 ```bash
 function sozluk() {
+  source /path/to/argparser.bash # < source your argparser here
   OPTIND=1 # < crucial, OPTIND should be fixed, or it will run forever
   LIMIT=5
   while argparser "help,limit:int" opt "$@"; do
@@ -95,6 +72,10 @@ function sozluk() {
       ;;
     \?) # < if argparser fails, it will give '?' as output.
       return 1
+      ;;
+    \+) # < this will match if argparser not found an option
+        # i do not recommend you to use this, probably not gonna work as you expect
+      echo "Translating: $opt, please wait a couple seconds."
       ;;
     esac
   done
