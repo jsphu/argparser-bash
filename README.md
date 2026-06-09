@@ -1,5 +1,27 @@
 # argparser _for bash_
 
+## Download & Install
+Download from releases: [argparser.bash v0.0.1](https://github.com/jsphu/argparser-bash/releases/download/v0.0.1/argparser.bash)
+```bash
+wget -O argparser.bash "https://github.com/jsphu/argparser-bash/releases/download/v0.0.1/argparser.bash"
+# or using curl
+curl -fsSL "https://github.com/jsphu/argparser-bash/releases/download/v0.0.1/argparser.bash" > argparser.bash
+```
+
+### Pull source code
+```bash
+git clone https://github.com/jsphu/argparser-bash.git
+# or using ssh
+git clone git@github.com:jsphu/argparser-bash.git
+```
+
+### Add this to .bashrc, or source on runtime
+```bash
+# now you can source this on anytime
+source argparser.bash
+```
+
+## Usage
 ```bash
 usage: argparser [-hdo] OPTIONSTRING NAME [arg ...]
 An extended version of getopts command
@@ -33,21 +55,6 @@ available types:
     :u :url                   URLs, https://example.com or example.com etc.
     :c :char :character       single literals 'a', 'b' etc.
     :a :alpha :alphabetical   only alphabetical words
-```
-
-## Download
-
-```sh
-git clone https://github.com/jsphu/argparser-bash argparser_bash
-cd argparser_bash
-# either add to your PATH
-export PATH=$PATH:/path/to/file/argparser_bash
-# or simply move to your local bin
-mv argparser.bash ~/.local/bin/argparser
-# or add a symlink of it
-ln -s /path/to/file/argparser.bash ~/.local/bin/argparser
-# or add this to your .bashrc
-[[ -f /path/to/argparser.bash ]] && source /path/to/argparser.bash
 ```
 
 ### Example Usage
