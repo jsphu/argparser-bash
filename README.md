@@ -113,7 +113,7 @@ function sozluk() {
 }
 ```
 
-Example run of 'sozluk':
+Example - 1: (types enabled, uppercase and next to arguments)
 
 ```bash
 $ sozluk --help
@@ -122,6 +122,32 @@ Direct translations of words TR-TR, TR-EN
 
 options:
      -l, --limit, --limit-output, --total LIMIT [INTEGER]   set a word limit to display
+     -n, --newline, --delim-newline, --printlines, --lines  seperate words with newlines
+     -h, --help, --usage                                    prints this and exits
+```
+
+Example - 2: (types disabled)
+
+```bash
+$ sozluk -h
+usage: sozluk [-hn] [-l LIMIT] WORD [WORD ...]
+Direct translations of words TR-TR, TR-EN
+
+options:
+     -l, --limit, --limit-output, --total LIMIT             set a word limit to display
+     -n, --newline, --delim-newline, --printlines, --lines  seperate words with newlines
+     -h, --help, --usage                                    prints this and exits
+```
+
+Example - 3: (types are not next to arguments, and not uppercase)
+
+```bash
+$ ARGPARSERSHOWTYPES=1 ARGPARSERTYPESNEXT=0 ARGPARSERTYPESUPPERCASE=0 sozluk -h
+usage: sozluk [-hn] [-l LIMIT] WORD [WORD ...]
+Direct translations of words TR-TR, TR-EN
+
+options:
+     -l, --limit, --limit-output, --total LIMIT             [integer] set a word limit to display
      -n, --newline, --delim-newline, --printlines, --lines  seperate words with newlines
      -h, --help, --usage                                    prints this and exits
 ```
