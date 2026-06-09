@@ -112,3 +112,16 @@ function sozluk() {
     xargs ${XARGSLIMIT} echo
 }
 ```
+
+Example run of 'sozluk':
+
+```bash
+$ sozluk --help
+usage: sozluk [-hn] [-l LIMIT] WORD [WORD ...]
+Direct translations of words TR-TR, TR-EN
+
+options:
+     -l, --limit, --limit-output, --total LIMIT [INTEGER]   set a word limit to display
+     -n, --newline, --delim-newline, --printlines, --lines  seperate words with newlines
+     -h, --help, --usage                                    prints this and exits
+```
