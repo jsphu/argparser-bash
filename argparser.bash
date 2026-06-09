@@ -431,21 +431,65 @@ EOF
 
   if $OPTIONDISPLAY; then
     echo -e "ARGPARSEROPTIONS() {"
-    echo -e "   cat <<EOF"
+    echo -e "    cat <<EOF"
+
+    # Step 1: Initialize an array to store lines and track the maximum length for column alignment
+    local -a lines=()
+    local max_opt_len=0
+
     for arg in "${!argstable[@]}"; do
       if [[ $arg =~ \.NAME$ ]]; then
+        local argname="${arg%*.NAME}"
+        local _argname="${argname//-/_}"
         IFS='|' read -ra arr <<<"${argstable[$arg]}"
-        echo -n "     "
+        
+        # Build the options string (e.g., "    -h, --help")
+        local opt_str="    "
+        local z=0
         for r in "${arr[@]}"; do
-          if (( ${#r} > 1 )); then
-            echo -ne "--$r, "
-          else
-            echo -ne "-$r, "
+          if (( z != "${#arr[@]}" && z != 0 )); then
+            opt_str+=","
           fi
+          if (( ${#r} > 1 )); then
+            opt_str+=" --$r"
+          else
+            opt_str+=" -$r"
+          fi
+          ((z++))
         done
-        echo ""
+
+        local ARGPARSERTYPE=""
+        if [[ -n "${argstable[$argname.TYPE]}" ]]; then
+          opt_str+=" ${_argname^^}"
+          if [[ "$ARGPARSERSHOWTYPES" == "true" || "$ARGPARSERSHOWTYPES" -eq 1 ]]; then
+            printf -v ARGPARSERTYPE "[${argstable[$argname.TYPE],,}] "
+            if [[ "$ARGPARSERTYPESUPPERCASE" == "true" || "$ARGPARSERTYPESUPPERCASE" -eq 1 ]]; then
+              ARGPARSERTYPE=${ARGPARSERTYPE^^}
+            fi
+            if [[ "$ARGPARSERTYPESNEXT" == "true" || "$ARGPARSERTYPESNEXT" -eq 1 ]]; then
+              opt_str+=" ${ARGPARSERTYPE}"
+              ARGPARSERTYPE=""
+            fi
+          fi
+        fi
+
+        # Track the maximum length of the left-hand side column
+        if (( ${#opt_str} > max_opt_len )); then
+          max_opt_len=${#opt_str}
+        fi
+
+        # Store the left side, the type info, and the variable name for later rendering
+        lines+=("${opt_str}"$'\x1f'"${ARGPARSERTYPE}"$'\x1f'"\$ARGPARSER_${_argname^^}")
       fi
     done
+
+    for line in "${lines[@]}"; do
+      IFS=$'\x1f' read -r opt_part type_part desc_part <<< "$line"
+      # %b safely processes backslash escapes if they exist in type
+      # %-*s dynamically pads the option string to the maximum length found
+      printf "%-*s  %b%b\n" "$max_opt_len" "$opt_part" "$type_part" "$desc_part"
+    done
+
     echo "EOF"
     echo ""
     echo "};"

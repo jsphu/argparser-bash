@@ -55,20 +55,39 @@ ln -s /path/to/file/argparser.bash ~/.local/bin/argparser
 ```bash
 function sozluk() {
   source /path/to/argparser.bash # < source your argparser here
-  OPTIND=1 # < crucial, OPTIND should be fixed, or it will run forever
-  LIMIT=5
-  while argparser "help,limit:int" opt "$@"; do
+  # important, OPTIND=1 is needed for every argparser
+  OPTIND=1 LIMIT=5 XARGSLIMIT=
+
+  # argparser is insensitive to any spaces, you can do anything with newlines etc.
+  printf -v opts '
+    limit   ~ limit-output  ~ total       :integer  ,
+    newline ~ delim-newline ~ printlines  ~ lines   ,
+    help    ~ usage
+  ' # or you can simply do this:
+  opts='limit:integer,help,newline' # do not forget to put ',' between options
+  # TODO: Add an ARGPARSEROPTIONSDELIM= environment variable to change ',' comma with anything.
+
+  while argparser "$opts" opt "$@"; do
     case "$opt" in # < same as getopts command, match option
     help)
       echo "usage: sozluk [-h] [-l LIMIT] WORD [WORD ...]"
       echo "Direct translations of words TR-TR, TR-EN"
       echo ""
       echo "options:"
-      ARGPARSEROPTIONS # < this prints all options for usage texts
+      ARGPARSER_HELP="prints this and exits"            # the template is simple
+      ARGPARSER_LIMIT="set a word limit to display"     # put your first option name
+      ARGPARSER_NEWLINE="seperate words with newlines"  # after 'ARGPARSER_' prefix
+      ARGPARSERSHOWTYPES=1        # this enables types to be seen on ARGPARSEROPTIONS
+      ARGPARSERTYPESNEXT=1        # puts types next to the option arguments
+      ARGPARSERTYPESUPPERCASE=1   # makes types uppercase [int] -> [INT]
+      ARGPARSEROPTIONS            # display options with this function
       return
       ;;
     limit)
       LIMIT="${OPTARG}" # < Same as getopts command, take argument
+      ;;
+    newline)
+      XARGSLIMIT='-L1'
       ;;
     \?) # < if argparser fails, it will give '?' as output.
       return 1
@@ -79,10 +98,17 @@ function sozluk() {
       ;;
     esac
   done
-  shift $((OPTIND - 1))
-  curl -fsSL "https://www.seslisozluk.net/${*// /-}-nedir-ne-demek/" |
+  shift $((OPTIND - 1)) # <-- just like getopts, shift all options
+  unset -f argparser __argparser # no need to do this, but might be good idea
+  if [[ -z $@ ]]; then
+    echo "usage: sozluk [-hn] [-l LIMIT] WORD [WORD ...]"
+    return 1
+  fi
+  local words=$(tr '[[:space:]]' '-' <<<"$@")
+  local url="https://www.seslisozluk.net/${words}nedir-ne-demek/"
+  curl -fsSL "$url" |
     pup 'a.definition-link text{}' |
     head -n ${LIMIT} |
-    xargs
+    xargs ${XARGSLIMIT} echo
 }
 ```
