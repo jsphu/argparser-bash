@@ -1,14 +1,17 @@
 # argparser _for bash_
 
 ## Download & Install
-Download from releases: [argparser.bash v0.0.1](https://github.com/jsphu/argparser-bash/releases/download/v0.0.1/argparser.bash)
+
+Download from releases: [argparser.bash v0.1.0](https://github.com/jsphu/argparser-bash/releases/download/v0.1.0/argparser)
+
 ```bash
-wget -O argparser.bash "https://github.com/jsphu/argparser-bash/releases/download/v0.0.1/argparser.bash"
+wget -O argparser.bash "https://github.com/jsphu/argparser-bash/releases/download/v0.1.0/argparser"
 # or using curl
-curl -fsSL "https://github.com/jsphu/argparser-bash/releases/download/v0.0.1/argparser.bash" > argparser.bash
+curl -fsSL "https://github.com/jsphu/argparser-bash/releases/download/v0.1.0/argparser" > argparser.bash
 ```
 
 ### Pull source code
+
 ```bash
 git clone https://github.com/jsphu/argparser-bash.git
 # or using ssh
@@ -16,12 +19,14 @@ git clone git@github.com:jsphu/argparser-bash.git
 ```
 
 ### Add this to .bashrc, or source on runtime
+
 ```bash
 # now you can source this on anytime
 source argparser.bash
 ```
 
 ## Usage
+
 ```bash
 usage: argparser [-hdo] OPTIONSTRING NAME [arg ...]
 An extended version of getopts command
