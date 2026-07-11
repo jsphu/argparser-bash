@@ -20,38 +20,39 @@ __argparser() {
 
   __usage() {
     cat <<-'EOF'
-    usage: argparser [-hdo] OPTIONSTRING NAME [arg ...]
-    An extended version of getopts command
+usage: argparser [-hdo] OPTIONSTRING NAME [arg ...]
+An extended version of getopts command
 
-    options:
-        -h                shows this usage
-        -d                debug mode
-        -o                add display function for options
-                          call it with: `ARGPARSEROPTIONS`
+options:
+    -h                shows this usage
+    -d                debug mode
+    -o                add display function for options
+                      call it with: `ARGPARSEROPTIONS`
 
-    parser rules:
-        option            -o or --option
-        option,t          (-o or --option) and -t
-        o:                -o=? or -o ?
-        *option           --option
-        *cat~bat          --cat or --bat
-        time~hour         -t or --time or --hour
-        d:int             -d=INTEGER or -d INTEGER
-        s:[s|b]           -s=STRING or -s=BYTE ...
-        c:(always|never)  -c="always" or -c="never" ...
+parser rules:
+    option            -o or --option
+    option,t          (-o or --option) and -t
+    o:                -o=? or -o ?
+    *option           --option
+    *cat~bat          --cat or --bat
+    time~hour         -t or --time or --hour
+    d:int             -d=INTEGER or -d INTEGER
+    s:[s|b]           -s=STRING or -s=BYTE ...
+    c:(always|never)  -c="always" or -c="never" ...
 
-    available types:
-        : :any                    (default) anything
-        :(match|exact|same|thing) only exact same thing given
-        :? :bool :boolean         true or false
-        :i :int :integer          -36893488147419103232 to 36893488147419103232
-        :f :float :double         +-36893488147419103232.36893488147419103232
-        :b :byte :bytes           anything
-        :d :date :datetime        whatever 'date -d' command allows
-        :s :str :string           anything
-        :u :url                   URLs, https://example.com or example.com etc.
-        :c :char :character       single literals 'a', 'b' etc.
-        :a :alpha :alphabetical   only alphabetical words
+available types:
+    : :any                    (default) anything
+    :(match|exact|same|thing) only exact same thing given
+    :? :bool :boolean         true or false
+    :i :int :integer          -36893488147419103232 to 36893488147419103232
+    :f :float :double         +-36893488147419103232.36893488147419103232
+    :b :byte :bytes           anything
+    :d :date :datetime        whatever 'date -d' command allows
+    :s :str :string           anything
+    :u :url                   URLs, https://example.com or example.com etc.
+    :p :path                  file path
+    :c :char :character       single literals 'a', 'b' etc.
+    :a :alpha :alphabetical   only alphabetical words
 
 EOF
   }
@@ -79,6 +80,7 @@ EOF
   __is_char() { [[ $1 =~ ^[a-zA-Z]$ ]]; return $?; }
   __is_alpha() { [[ $1 =~ ^[a-zA-Z]+$ ]]; return $?; }
   __is_url() { [[ $1 =~ ^([a-zA-Z0-9]+://)?([a-zA-Z0-9-]+\.)?[a-zA-Z]+\.[a-z]+(\/.*)?$ ]]; return $?; }
+  __is_path() { [[ $1 =~ ^(/|\.|~).* ]]; return $?; }
 
   __validate_type() {
     local arg="$1"
@@ -99,6 +101,7 @@ EOF
         u|url) __is_url "$arg"; ret=$?;;
         c|char|character) __is_char "$arg"; ret=$?;;
         a|alpha|alphabetical) __is_alpha "$arg"; ret=$?;;
+        p|path) __is_path "$arg"; ret=$?;;
         any) ret=0;;
         strict) __is_strict "$arg" "${typ#STRICT|*}"; return $?;;
         *) ret=1;;
@@ -155,13 +158,14 @@ EOF
     "c" "char" "character"
     "a" "alpha" "alphabetical"
     "u" "url"
+    "p" "path"
     "strict"
     "any"
   )
 
   declare -A argstable
   declare -A realopts
-  IFS=',' read -r -a args <<<"${1//[[:space:]]/}"
+  IFS="${ARGPARSEROPTIONSDELIM:-,}" read -r -a args <<<"${1//[[:space:]]/}"
   for i in "${args[@]}"; do
 
     # skip if empty argument is there
@@ -289,30 +293,40 @@ EOF
   done
   shift 1
 
-  __debug "parsed options:"
-  $DEBUG && paste -d $'\t' <(printf "\033[1;31m[DEBUG]\033[0;33m %s\n" "${!argstable[@]}") <(printf "%s\n" "${argstable[@]}") | sort -k1 | column -to " = " -s $'\t' 1>&2
+  # __debug "parsed options:"
+  # $DEBUG && paste -d $'\t' <(printf "\033[1;31m[DEBUG]\033[0;33m %s\n" "${!argstable[@]}") <(printf "%s\n" "${argstable[@]}") | sort -k1 | column -to " = " -s $'\t' 1>&2
 
   # assign argparse options to this variable
   # just like getopts' NAME
   OPT="$1"
   shift 1
 
-  __debug "assigning to name: '$OPT'"
+  # __debug "assigning to name: '$OPT'"
 
   CUR_OPTIND=${1:-1}
+  shift 1
+
+  # 1-based offset into the CURRENT argv token (item), pointing at the
+  # next unconsumed character after the leading '-'. This is what lets
+  # a combined cluster like -lhtra survive across separate calls to
+  # this function: OPTIND alone can only point at a whole argv token,
+  # it can't say "we're 2 characters into it", so that position has to
+  # be threaded through the same eval-based round-trip OPTIND uses.
+  CUR_OPTSUBIND=${1:-1}
   shift 1
 
   REMAINING_ARGS=("${@:CUR_OPTIND}")
 
   item="${REMAINING_ARGS[0]}"
-  __debug "choose first item '$item' inside '${REMAINING_ARGS[*]}'"
+
+  # __debug "choose '$item' inside '${REMAINING_ARGS[*]}', subind=$CUR_OPTSUBIND"
 
   ok=true
 
   if [[ -z $item || "$item" != -* ]]; then
     __debug "no more options, item='$item'"
-    __debug "$OPT='+'; OPTIND=$CUR_OPTIND; false"
-    echo "$OPT='+'; OPTIND=$CUR_OPTIND; false"
+    __debug "$OPT='+'; OPTIND=$CUR_OPTIND; OPTSUBIND=1; false"
+    echo "$OPT='+'; OPTIND=$CUR_OPTIND; OPTSUBIND=1; false"
     return 1
   fi
 
@@ -320,6 +334,7 @@ EOF
 
   found_arg=""
   next_optind=$((CUR_OPTIND + 1))
+  next_optsubind=1
 
   # is the option long formatted? '--help' '--long' etc.
   if $ok && [[ $item =~ ^-- ]]; then
@@ -367,8 +382,8 @@ EOF
 
     # is the option short formatted? '-h' '-hlts' etc.
   elif $ok && [[ $item =~ ^- ]]; then
-    __debug "short option: $item"
-    char="${item:1:1}"
+    __debug "short option: $item (char index $CUR_OPTSUBIND)"
+    char="${item:CUR_OPTSUBIND:1}"
     if ! __is_option_valid "$char"; then
       echo "echo 'illegal option: -$char' >&2;"
       found_opt=$'\?'
@@ -390,15 +405,20 @@ EOF
 
     # Handle required arguments
     if ! ${argstable[$found_opt.BOOL]}; then
-      if (( ${#item} > 2 )); then
-        # -n10 format
-        found_arg="${item:2}"
+      if (( CUR_OPTSUBIND + 1 < ${#item} )); then
+        # -n10 / -lhtra format: whatever is left of this token
+        # (after the option char itself) becomes the value, e.g.
+        # for -lhtra with l,h boolean and t taking a value, once we
+        # reach 't' the remaining "ra" becomes its argument.
+        found_arg="${item:CUR_OPTSUBIND+1}"
         found_arg="${found_arg#=}"
         next_optind=$((CUR_OPTIND + 1))
+        next_optsubind=1
       else
-        # -n 10 format
+        # -n 10 format: value is the next whole token
         found_arg="${REMAINING_ARGS[1]}"
         next_optind=$((CUR_OPTIND + 2))
+        next_optsubind=1
       fi
 
       if [[ -z $found_arg ]]; then
@@ -407,8 +427,17 @@ EOF
         ok=false
       fi
     else
-      # For now, we'll treat it as a single flag.
-      next_optind=$((CUR_OPTIND + 1))
+      # Boolean flag. If there are more characters left in this
+      # cluster (e.g. -lhtra with 'l' just consumed, "htra" left),
+      # stay on the SAME argv token and just move the character
+      # pointer forward instead of advancing to the next token.
+      if (( CUR_OPTSUBIND + 1 < ${#item} )); then
+        next_optind=$CUR_OPTIND
+        next_optsubind=$((CUR_OPTSUBIND + 1))
+      else
+        next_optind=$((CUR_OPTIND + 1))
+        next_optsubind=1
+      fi
     fi
 
   fi
@@ -431,6 +460,25 @@ EOF
 
   if $OPTIONDISPLAY; then
     echo -e "ARGPARSEROPTIONS() {"
+    cat <<EOF
+    if [[ -n "\$ARGPARSERUSAGE" || -n "\$ARGPARSERCOMMAND" ]]; then
+      if [[ -n "\$ARGPARSERCOMMAND" && -n "\$ARGPARSERARGS" ]]; then
+      echo -e "usage: \$ARGPARSERCOMMAND [$(
+        printf -- '--%s\n| ' "${!argstable[@]}" |
+          grep '\.NAME$' |
+          sed 's/\.NAME$//' |
+          tr '\n' ' '
+      )] \$ARGPARSERARGS"
+      else
+        echo -e "usage: \$ARGPARSERUSAGE"
+      fi
+      if [[ -n "\$ARGPARSERDESCRIPTION" ]]; then
+        echo -e "\$ARGPARSERDESCRIPTION"
+      fi
+      echo ""
+      echo "options: "
+    fi
+EOF
     echo -e "    cat <<EOF"
 
     # Step 1: Initialize an array to store lines and track the maximum length for column alignment
@@ -446,8 +494,9 @@ EOF
         # Build the options string (e.g., "    -h, --help")
         local opt_str="    "
         local z=0
+        local arr_len=${#arr[@]}
         for r in "${arr[@]}"; do
-          if (( z != "${#arr[@]}" && z != 0 )); then
+          if (( z != arr_len && z != 0 )); then
             opt_str+=","
           fi
           if (( ${#r} > 1 )); then
@@ -456,6 +505,9 @@ EOF
             opt_str+=" -$r"
           fi
           ((z++))
+          if (( arr_len == 1 )); then
+            break
+          fi
         done
 
         local ARGPARSERTYPE=""
@@ -491,49 +543,42 @@ EOF
     done
 
     echo "EOF"
+    cat <<'EOF'
+    if [[ -n "$ARGPARSERBOTTOMTEXT" ]]; then
+      echo ""
+      echo -e "$ARGPARSERBOTTOMTEXT"
+    fi
+EOF
     echo ""
     echo "};"
   fi
 
-  __debug "$OPT='$found_opt';"
-  __debug "OPTARG='$found_arg';"
-  __debug "OPTIND=$next_optind;"
-  __debug "ok=$ok;"
+  __debug "$OPT='$found_opt'; OPTARG='$found_arg'; OPTIND=$next_optind; OPTSUBIND=$next_optsubind; ok=$ok;"
 
   if [[ "$found_opt" == "+" ]] && (( next_optind <= CUR_OPTIND )); then
       next_optind=$((CUR_OPTIND + 1))
+      next_optsubind=1
   fi
 
   if [[ -n "$found_opt" ]]; then
-    echo "$OPT='$found_opt'; OPTARG='$found_arg'; OPTIND=$next_optind; $ok"
+    echo "$OPT='$found_opt'; OPTARG='$found_arg'; OPTIND=$next_optind; OPTSUBIND=$next_optsubind; $ok"
   else
-    echo "$OPT='?'; OPTIND=$next_optind; false"
+    echo "$OPT='?'; OPTIND=$next_optind; OPTSUBIND=$next_optsubind; false"
   fi
   return 0
 }
-
-# Example usage:
-# source /path/to/argparser.bash
-# OPTIND=1
-# while argparser "help" opt "$@"; do
-#   case "$opt" in
-#     help) echo "help!";;
-#     \?) echo "oops 'argparser' got an error!";;
-#     \+) echo "i am not an option!";;
-#   esac
-# done
-# shift $((OPTIND - 1))
-
-# Sourcing this file, will override
-# above private one, to keep it clean
-# Use 'Public' one on while loops
 
 # Public function
 function argparser() {
   local OPTSTR="$1" OPTNAM="$2" c=""
   [[ -z $OPTSTR || -z $OPTNAM ]] && unset -f __argparser && return 2 
   shift 2
-  c=$(__argparser -o "$OPTSTR" "$OPTNAM" "$OPTIND" "$@")
+
+  # OPTSUBIND tracks how far we are INTO a combined short-option cluster,
+  # character by character, across separate calls to this function.
+  : "${OPTSUBIND:=1}"
+
+  c=$(__argparser -o "$OPTSTR" "$OPTNAM" "$OPTIND" "$OPTSUBIND" "$@")
   eval "$c"
 
   if [[ ${!OPTNAM} == "+" ]]; then
@@ -547,10 +592,6 @@ function argparser() {
   fi
 }
 
-# Executing this file
-# will help you to engage
-# with argparser
-# on command prompt
 if ! (return 2>/dev/null); then
   __argparser $@
 fi
