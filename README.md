@@ -84,10 +84,11 @@ example() {
     help)
       # you can set command name and arguments for usage display
       # options will be displayed automatically based on the opts variable
+      declare -A ARGPARSERARGS=()
       ARGPARSERCOMMAND="example"
-      ARGPARSERARGS="<arg ...>"
+      ARGPARSERARGS["arg ..."]="some argument"
       # or you can make one line usage like this:
-      ARGPARSERUSAGE="example [-hlacqs] <arg ...>"
+      # ARGPARSERUSAGE="example [-hlacqs] <arg ...>"
 
       # add a description for your script, and it will be displayed in the usage
       ARGPARSERDESCRIPTION="An example script."
@@ -123,6 +124,8 @@ $ example --help
 usage: example [-hlacqs] <arg ...>
 An example script.
 
+    <arg ...>   some argument
+
 options:
     -h, --help         prints this usage
     -l, --list         lists all
@@ -136,20 +139,31 @@ https://github.com/jsphu/argparser-bash
 
 ### Tips
 
+Parser options are stored in the following variables:
+
 ```bash
 OPTIND=1 # reset OPTIND to 1 if you want to use argparser more than once in a script
 OPTSUBIND=1 # reset OPTSUBIND to 1 if you want to use argparser more than once in a script
 
-ARGPARSEROPTIONS # help display function
-ARGPARSEROPTIONSDELIM= # change delimiter for options display, default is a comma.
+ARGPARSEROPTIONSDELIM= # change delimiter for options parser, default is a comma.
+```
+
+`ARGPARSEROPTIONS` display options are stored in the following variables:
+
+```bash
+ARGPARSEROPTIONS # smart display function for usage of command. Call it at the end.
+ARGPARSERTOPTEXT= # set top text
+declare -a ARGPARSERTOPTEXT=() # set top text for usage display, you can set multiple lines with this array.
 ARGPARSERCOMMAND= # set command name for usage display
 ARGPARSERARGS= # set arguments for usage display
+declare -A ARGPARSERARGS[arg]= # set argument description for usage display using this associative array. You can set multiple arguments with this array.
 ARGPARSERUSAGE= # set usage for usage display
 ARGPARSERDESCRIPTION= # set description for usage display
+ARGPARSERMIDDLETEXT= # set middle text for usage display
+declare -a ARGPARSERMIDDLETEXT=() # set middle text for usage display, you can set multiple lines with this array.
 ARGPARSERBOTTOMTEXT= # set bottom text for usage display
-
-ARGPARSER_ # variables are set for each option, will display when calling 'ARGPARSEROPTIONS'.
-
+declare -a ARGPARSERBOTTOMTEXT=() # set bottom text for usage display, you can set multiple lines with this array.
+ARGPARSER_ # prefix for all options.
 ARGPARSERSHOWTYPES=1 # display types. you can use (true|false) or (1|0) to enable or disable.
 ARGPARSERTYPESUPPERCASE=1 # display types in uppercase
 ```

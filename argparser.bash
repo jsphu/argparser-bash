@@ -163,6 +163,7 @@ EOF
     "any"
   )
 
+  declare -a _shorts=() _longs=() _wants=()
   declare -A argstable
   declare -A realopts
   IFS="${ARGPARSEROPTIONSDELIM:-,}" read -r -a args <<<"${1//[[:space:]]/}"
@@ -289,6 +290,15 @@ EOF
 
       argstable["${TYPEINDEX}"]="${TYPEVALUE}"
 
+    fi
+
+    # put arguments into arrays
+    if $NOSHORT && $BOOL; then
+      _longs+=("${NAME}")
+    elif $BOOL; then
+      _shorts+=("${NAME:0:1}")
+    else
+      _wants+=("${NAME}")
     fi
   done
   shift 1
@@ -461,23 +471,108 @@ EOF
   if $OPTIONDISPLAY; then
     echo -e "ARGPARSEROPTIONS() {"
     cat <<EOF
-    if [[ -n "\$ARGPARSERUSAGE" || -n "\$ARGPARSERCOMMAND" ]]; then
-      if [[ -n "\$ARGPARSERCOMMAND" && -n "\$ARGPARSERARGS" ]]; then
-      echo -e "usage: \$ARGPARSERCOMMAND [$(
-        printf -- '--%s\n| ' "${!argstable[@]}" |
-          grep '\.NAME$' |
-          sed 's/\.NAME$//' |
-          tr '\n' ' '
-      )] \$ARGPARSERARGS"
-      else
-        echo -e "usage: \$ARGPARSERUSAGE"
+    if [[ "\${ARGPARSERTOPTEXT@a}" == *a* ]]; then
+      for line in "\${ARGPARSERTOPTEXT[@]}"; do
+        echo -e "\$line"
+      done
+    else
+      if [[ -n "\${ARGPARSERTOPTEXT}" ]]; then
+        echo -e "\$ARGPARSERTOPTEXT"
       fi
-      if [[ -n "\$ARGPARSERDESCRIPTION" ]]; then
-        echo -e "\$ARGPARSERDESCRIPTION"
+    fi
+    if [[ -n "\$ARGPARSERCOMMAND" && -n "\$ARGPARSERARGS" || "\${ARGPARSERARGS@a}" == *A* ]] ; then
+      echo -en "$(
+        declare -a __output=()
+        if [[ ${#_shorts[@]} -ne 0 ]]; then
+          __output+=("[-$(printf "%s" "${_shorts[@]}")]")
+        fi
+        if [[ ${#_longs[@]} -ne 0 ]]; then
+          for _l in "${_longs[@]}"; do
+            [[ -n "$_l" ]] && __output+=("[--$_l]")
+          done
+        fi
+        if [[ ${#_wants[@]} -ne 0 ]]; then
+          for _w in "${_wants[@]}"; do
+            __w="${_w//-/_}"
+            [[ -n "$_w" ]] && __output+=("[--$_w ${__w^^}]")
+          done
+        fi
+
+        # --- SMART WRAPPING ENGINE ---
+        local prefix="usage: \$ARGPARSERCOMMAND "
+        # Strip backslashes from prefix for an accurate text length measurement
+        local clean_prefix="${prefix//\\/}"
+        local prefix_len=${#clean_prefix}
+        
+        # Build padding spaces matching the prefix width for subsequent lines
+        local padding=""
+        printf -v padding "%${prefix_len}s" ""
+
+        local max_width=$COLUMNS   # Target terminal wrap width
+        local current_line="$prefix"
+        local current_len=$prefix_len
+        local is_first_item=1
+
+        for item in "${__output[@]}"; do
+          local item_len=${#item}
+          
+          # Check if adding this item (plus a space separator) exceeds the line width
+          if (( current_len + item_len + 1 > max_width )) && (( is_first_item == 0 )); then
+            # Print current line with a newline, reset line with the padding alignment
+            echo -e "$current_line"
+            current_line="${padding}${item}"
+            current_len=$(( prefix_len + item_len ))
+          else
+            # Append item to the current line
+            if [[ "$current_line" == "$prefix" || "$current_line" == "$padding" ]]; then
+              current_line+="${item}"
+              current_len=$(( current_len + item_len ))
+            else
+              current_line+=" ${item}"
+              current_len=$(( current_len + item_len + 1 ))
+            fi
+            is_first_item=0
+          fi
+        done
+        
+        # Print the final trailing line cleanly
+        echo -n "$current_line"
+      )"
+      if [[ "\${ARGPARSERARGS@a}" == *A* ]]; then
+        for _arg in "\${!ARGPARSERARGS[@]}"; do
+          echo -en " <\${_arg}>"
+        done
+      else
+        if [[ -n "\$ARGPARSERARGS" ]]; then
+          echo -en " \${ARGPARSERARGS@U}"
+        fi
       fi
       echo ""
-      echo "options: "
+    elif [[ -n "\$ARGPARSERUSAGE" ]]; then
+      echo -e "usage: \$ARGPARSERUSAGE"
     fi
+    if [[ -n "\$ARGPARSERDESCRIPTION" ]]; then
+      echo -e "\$ARGPARSERDESCRIPTION"
+    fi
+
+    if [[ "\${ARGPARSERARGS@a}" == *A* ]]; then
+      echo ""
+      for _arg in "\${!ARGPARSERARGS[@]}"; do
+        echo -e "\t<\${_arg}>\t\${ARGPARSERARGS[\$_arg]}"
+      done
+    fi
+    if [[ "\${ARGPARSERMIDDLETEXT@a}" == *a* ]]; then
+      echo ""
+      for line in "\${ARGPARSERMIDDLETEXT[@]}"; do
+        echo -e "\$line"
+      done
+    else
+      if [[ -n "\$ARGPARSERMIDDLETEXT" ]]; then
+        echo -e "\n\$ARGPARSERMIDDLETEXT"
+      fi
+    fi
+    echo ""
+    echo "options: "
 EOF
     echo -e "    cat <<EOF"
 
@@ -543,10 +638,16 @@ EOF
     done
 
     echo "EOF"
-    cat <<'EOF'
-    if [[ -n "$ARGPARSERBOTTOMTEXT" ]]; then
+    cat <<EOF
+    if [[ "\${ARGPARSERBOTTOMTEXT@a}" == *a* ]]; then
       echo ""
-      echo -e "$ARGPARSERBOTTOMTEXT"
+      for line in "\${ARGPARSERBOTTOMTEXT[@]}"; do
+        echo -e "\$line"
+      done
+    else
+      if [[ -n "\${ARGPARSERBOTTOMTEXT}" ]]; then
+        echo -e "\n\$ARGPARSERBOTTOMTEXT"
+      fi
     fi
 EOF
     echo ""
