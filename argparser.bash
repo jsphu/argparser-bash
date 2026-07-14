@@ -293,10 +293,12 @@ EOF
     fi
 
     # put arguments into arrays
-    if $NOSHORT && $BOOL; then
-      _longs+=("${NAME}")
-    elif $BOOL; then
-      _shorts+=("${NAME:0:1}")
+    if $BOOL; then
+      if $NOSHORT || [[ "$ARGPARSERFORCELONGS" -eq 1 || $ARGPARSERFORCELONGS == "true" ]]; then
+        _longs+=("${NAME}")
+      else
+        _shorts+=("${NAME:0:1}")
+      fi
     else
       _wants+=("${NAME}")
     fi
@@ -507,7 +509,7 @@ EOF
         local padding=""
         printf -v padding "%*s" "$prefix_len" ""
 
-        local max_width=$COLUMNS   # Dynamic runtime terminal width
+        local max_width=$(( COLUMNS / 2 ))   # Dynamic runtime terminal width
         local current_line="$prefix"
         local current_len=$prefix_len
         local is_first_item=1
