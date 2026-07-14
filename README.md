@@ -2,12 +2,12 @@
 
 ## Download & Install
 
-Download from releases: [argparser.bash v0.1.0](https://github.com/jsphu/argparser-bash/releases/download/v0.1.0/argparser)
+Download from releases: [argparser.bash v0.2.0](https://github.com/jsphu/argparser-bash/releases/download/v0.2.0/argparser)
 
 ```bash
-wget -O argparser.bash "https://github.com/jsphu/argparser-bash/releases/download/v0.1.0/argparser"
+wget -O argparser.bash "https://github.com/jsphu/argparser-bash/releases/download/v0.2.0/argparser"
 # or using curl
-curl -fsSL "https://github.com/jsphu/argparser-bash/releases/download/v0.1.0/argparser" > argparser.bash
+curl -fsSL "https://github.com/jsphu/argparser-bash/releases/download/v0.2.0/argparser" > argparser.bash
 ```
 
 ### Pull source code
