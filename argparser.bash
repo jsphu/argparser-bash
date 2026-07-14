@@ -481,34 +481,33 @@ EOF
       fi
     fi
     if [[ -n "\$ARGPARSERCOMMAND" && -n "\$ARGPARSERARGS" || "\${ARGPARSERARGS@a}" == *A* ]] ; then
-      echo -en "$(
-        declare -a __output=()
-        if [[ ${#_shorts[@]} -ne 0 ]]; then
-          __output+=("[-$(printf "%s" "${_shorts[@]}")]")
-        fi
-        if [[ ${#_longs[@]} -ne 0 ]]; then
-          for _l in "${_longs[@]}"; do
-            [[ -n "$_l" ]] && __output+=("[--$_l]")
-          done
-        fi
-        if [[ ${#_wants[@]} -ne 0 ]]; then
-          for _w in "${_wants[@]}"; do
-            __w="${_w//-/_}"
-            [[ -n "$_w" ]] && __output+=("[--$_w ${__w^^}]")
-          done
-        fi
+EOF
+      echo -e "      local -a __output=("
+      if [[ ${#_shorts[@]} -ne 0 ]]; then
+        echo "        \"[-$(printf "%s" "${_shorts[@]}")]\""
+      fi
+      if [[ ${#_longs[@]} -ne 0 ]]; then
+        for _l in "${_longs[@]}"; do
+          [[ -n "$_l" ]] && echo "        \"[--$_l]\""
+        done
+      fi
+      if [[ ${#_wants[@]} -ne 0 ]]; then
+        for _w in "${_wants[@]}"; do
+          __w="${_w//-/_}"
+          [[ -n "$_w" ]] && echo "        \"[--$_w ${__w^^}]\""
+        done
+      fi
+      echo -e "      )"
 
-        # --- SMART WRAPPING ENGINE ---
-        local prefix="usage: \$ARGPARSERCOMMAND "
-        # Strip backslashes from prefix for an accurate text length measurement
-        local clean_prefix="${prefix//\\/}"
-        local prefix_len=${#clean_prefix}
+      cat <<'EOF_RUNTIME_WRAPPING'
+        local prefix="usage: ${ARGPARSERCOMMAND} "
+        local length=${#ARGPARSERCOMMAND}
+        local prefix_len=$(( length + 8 ))
         
-        # Build padding spaces matching the prefix width for subsequent lines
         local padding=""
-        printf -v padding "%${prefix_len}s" ""
+        printf -v padding "%*s" "$prefix_len" ""
 
-        local max_width=$COLUMNS   # Target terminal wrap width
+        local max_width=$COLUMNS   # Dynamic runtime terminal width
         local current_line="$prefix"
         local current_len=$prefix_len
         local is_first_item=1
@@ -516,14 +515,11 @@ EOF
         for item in "${__output[@]}"; do
           local item_len=${#item}
           
-          # Check if adding this item (plus a space separator) exceeds the line width
           if (( current_len + item_len + 1 > max_width )) && (( is_first_item == 0 )); then
-            # Print current line with a newline, reset line with the padding alignment
             echo -e "$current_line"
             current_line="${padding}${item}"
             current_len=$(( prefix_len + item_len ))
           else
-            # Append item to the current line
             if [[ "$current_line" == "$prefix" || "$current_line" == "$padding" ]]; then
               current_line+="${item}"
               current_len=$(( current_len + item_len ))
@@ -535,9 +531,9 @@ EOF
           fi
         done
         
-        # Print the final trailing line cleanly
         echo -n "$current_line"
-      )"
+EOF_RUNTIME_WRAPPING
+    cat <<EOF
       if [[ "\${ARGPARSERARGS@a}" == *A* ]]; then
         for _arg in "\${!ARGPARSERARGS[@]}"; do
           echo -en " <\${_arg}>"
@@ -558,7 +554,10 @@ EOF
     if [[ "\${ARGPARSERARGS@a}" == *A* ]]; then
       echo ""
       for _arg in "\${!ARGPARSERARGS[@]}"; do
-        echo -e "\t<\${_arg}>\t\${ARGPARSERARGS[\$_arg]}"
+        local _arg_len=\${#_arg} _argdef_len=\${#ARGPARSERARGS[\$_arg]}
+        _arg_len=\$(( _arg_len + 2 ))
+        _argdef_len=\$(( _argdef_len + _arg_len - 4 ))
+        printf '     %*s%*s\n' "\$_arg_len" "<\${_arg}>" "\$_argdef_len" "\${ARGPARSERARGS[\$_arg]}"
       done
     fi
     if [[ "\${ARGPARSERMIDDLETEXT@a}" == *a* ]]; then
