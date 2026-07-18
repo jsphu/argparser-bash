@@ -167,3 +167,83 @@ ARGPARSER_ # prefix for all options.
 ARGPARSERSHOWTYPES=1 # display types. you can use (true|false) or (1|0) to enable or disable.
 ARGPARSERTYPESUPPERCASE=1 # display types in uppercase
 ```
+
+## Upcoming Version v1.0.0
+
+Included in repository for current development, but not yet released. You can try it out by pulling the source code and using the `argparser_v1.0.bash` file.
+
+### Whats included on v1.0.0?
+
+```bash
+# - new parsing methods
+declare -A ARGPARSER=(
+
+    # option: prefix for options (you can use these too= opt: | o:)
+    [option:help]="show this usage"
+    [option:debug]="debug mode"
+
+    # same as old version, :<type> suffix for options that require argument
+    [option:t:any]="takes argument"
+
+    # new '+N' suffix for multi arguments.
+    # Takes exactly 'N' arguments, and will be stored in argparser_value as an array.
+    [option:multi+N]="takes #N arguments"
+
+    # set types behaviour on usage display naturally in types field.
+    # omit if you don't want these attributes.
+    [types]="show uppercase next"
+
+    # additional texts for custom experience
+    [top]="This is a top text."
+    [mid]="This is a middle text."
+    [bot]="This is a bottom text."
+
+    # you can add more lines for top, mid, bot text with prefixing the key
+    # currently sorting is not working, it will be placed in random order.
+    [top1]=""
+    [top2]=""
+
+    # used for 'argparser_usage --usage-only to display one-liner usage text'
+    [usage]="argparser [-hdo] OPTIONSTRING NAME [arg ...]"
+
+    # additional description
+    [description]="An extended version of getopts command"
+
+    # set command name to appear in usage display.
+    [command]="argparser"
+
+    # set positional arguments for usage display, you can set multiple arguments with this associative array.
+    [argument:input]="input file"
+
+    # arg: and a: are both valid prefixes for arguments, you can use either one.
+    [arg:output]="output file"
+    [a:log]="log file"
+)
+
+# no need to give an option string, it generated above based on the ARGPARSER associative array.
+while argparser "$@"; do
+
+    # now no need to describe an OPT key, every argparser key is stored in the variable ${argparser_key} and its value in ${argparser_value}
+    case "$argparser_key" in
+        # you can use argparser_usage to display according to ARGPARSER associative array.
+        h) argparser_usage ;;
+        
+        # available options for argparser_usage:
+        #    -1 | -u | --one-line | --usage-only
+        #    -t | --top-only
+        #    -m | --mid-only
+        #    -b | --bot-only
+        #    -o | --options-only
+        # TODO: --format filter to ignore certain options or arguments, and display only the ones you want.
+
+        d) DEBUG=true ;;
+        o) OPTIONDISPLAY=true ;;
+
+        # non-multi arguments are stored in the variable ${argparser_value}
+        t) T="${argparser_value}" ;;
+
+        # for multi arguments; you can unpack array values with ${argparser_value[@]} or ${argparser_value[0]} for the first value
+        m) MULTI="${argparser_value[@]}" ;;
+    esac
+done
+```

@@ -496,7 +496,10 @@ EOF
       if [[ ${#_wants[@]} -ne 0 ]]; then
         for _w in "${_wants[@]}"; do
           __w="${_w//-/_}"
-          [[ -n "$_w" ]] && echo "        \"[--$_w ${__w^^}]\""
+          [[ -z "$_w" ]] && continue
+          [[ "${#_w}" -eq 1 ]] &&
+            echo "        \"[-$_w ${__w^^}]\"" ||
+            echo "        \"[--$_w ${__w^^}]\""
         done
       fi
       echo -e "      )"
@@ -535,41 +538,50 @@ EOF
         
         echo -n "$current_line"
 EOF_RUNTIME_WRAPPING
-    cat <<EOF
-      if [[ "\${ARGPARSERARGS@a}" == *A* ]]; then
-        for _arg in "\${!ARGPARSERARGS[@]}"; do
-          echo -en " <\${_arg}>"
+    cat <<'EOF'
+      if [[ "${ARGPARSERARGS@a}" == *A* ]]; then
+        for _arg in "${!ARGPARSERARGS[@]}"; do
+          echo -en " <${_arg}>"
         done
       else
-        if [[ -n "\$ARGPARSERARGS" ]]; then
-          echo -en " \${ARGPARSERARGS@U}"
+        if [[ -n "$ARGPARSERARGS" ]]; then
+          echo -en " ${ARGPARSERARGS@U}"
         fi
       fi
       echo ""
-    elif [[ -n "\$ARGPARSERUSAGE" ]]; then
-      echo -e "usage: \$ARGPARSERUSAGE"
+    elif [[ -n "$ARGPARSERUSAGE" ]]; then
+      echo -e "usage: $ARGPARSERUSAGE"
     fi
-    if [[ -n "\$ARGPARSERDESCRIPTION" ]]; then
-      echo -e "\$ARGPARSERDESCRIPTION"
+    if [[ -n "$ARGPARSERDESCRIPTION" ]]; then
+      echo -e "$ARGPARSERDESCRIPTION"
     fi
 
-    if [[ "\${ARGPARSERARGS@a}" == *A* ]]; then
+    if [[ "${ARGPARSERARGS@a}" == *A* ]]; then
       echo ""
-      for _arg in "\${!ARGPARSERARGS[@]}"; do
-        local _arg_len=\${#_arg} _argdef_len=\${#ARGPARSERARGS[\$_arg]}
-        _arg_len=\$(( _arg_len + 2 ))
-        _argdef_len=\$(( _argdef_len + _arg_len - 4 ))
-        printf '     %*s%*s\n' "\$_arg_len" "<\${_arg}>" "\$_argdef_len" "\${ARGPARSERARGS[\$_arg]}"
+      local _max_arg_def_len=0 _max_arg_len=0
+      for _arg in "${!ARGPARSERARGS[@]}"; do
+        local _argdef="${ARGPARSERARGS[$_arg]}"
+        if (( ${#_argdef} > _max_arg_def_len )); then
+          _max_arg_def_len=${#_argdef}
+        fi
+        if (( ${#_arg} > _max_arg_len )); then
+          _max_arg_len=${#_arg}
+        fi
+      done
+      for _arg in "${!ARGPARSERARGS[@]}"; do
+        local _arg_len=${#_arg} _arg_def_len=${#ARGPARSERARGS[$_arg]}
+        _arg_def_len=$(( _max_arg_len + 4 + _max_arg_def_len - _arg_def_len ))
+        printf '    %+*s\t%*s\n' "$_arg_len" "<${_arg}>" "$_arg_def_len" "${ARGPARSERARGS[$_arg]}"
       done
     fi
-    if [[ "\${ARGPARSERMIDDLETEXT@a}" == *a* ]]; then
+    if [[ "${ARGPARSERMIDDLETEXT@a}" == *a* ]]; then
       echo ""
-      for line in "\${ARGPARSERMIDDLETEXT[@]}"; do
-        echo -e "\$line"
+      for line in "${ARGPARSERMIDDLETEXT[@]}"; do
+        echo -e "$line"
       done
     else
-      if [[ -n "\$ARGPARSERMIDDLETEXT" ]]; then
-        echo -e "\n\$ARGPARSERMIDDLETEXT"
+      if [[ -n "$ARGPARSERMIDDLETEXT" ]]; then
+        echo -e "\n$ARGPARSERMIDDLETEXT"
       fi
     fi
     echo ""
@@ -627,7 +639,7 @@ EOF
         fi
 
         # Store the left side, the type info, and the variable name for later rendering
-        lines+=("${opt_str}"$'\x1f'"${ARGPARSERTYPE}"$'\x1f'"\$ARGPARSER_${_argname^^}")
+        lines+=("${opt_str}"$'\x1f'"${ARGPARSERTYPE}"$'\x1f'"\${ARGPARSER['${_argname}']}")
       fi
     done
 
