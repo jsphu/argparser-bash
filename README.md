@@ -189,9 +189,11 @@ declare -A ARGPARSER=(
     # Takes exactly 'N' arguments, and will be stored in argparser_value as an array.
     [option:multi+N]="takes #N arguments"
 
-    # set types behaviour on usage display naturally in types field.
+    # set display behaviour on usage naturally in styles field.
     # omit if you don't want these attributes.
-    [types]="show uppercase next"
+    [styles]="types.show types.uppercase types.next options.force_longs"
+    # reverse. They are default.
+    [styles]="types.hide types.lowercase types.in_description options.normal"
 
     # additional texts for custom experience
     [top]="This is a top text."

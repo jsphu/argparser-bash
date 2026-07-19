@@ -34,18 +34,17 @@ __argparser() {
               fi
               echo "ARGPARSER['$key']='${value# *}'"
               ;;
-          types)
+          styles)
               for val in $value; do
                 case "${val,,}" in
-                show)
-                  ARGPARSERSHOWTYPES=true
-                  ;;
-                uppercase)
-                  ARGPARSERTYPESUPPERCASE=true
-                  ;;
-                next)
-                  ARGPARSERTYPESNEXT=true
-                  ;;
+                options.force_longs) ARGPARSERFORCELONGS=true ;;
+                options.normal) ARGPARSERFORCELONGS=false ;;
+                types.hide) ARGPARSERSHOWTYPES=false ;;
+                types.show) ARGPARSERSHOWTYPES=true ;;
+                types.uppercase) ARGPARSERTYPESUPPERCASE=true ;;
+                types.lowercase) ARGPARSERTYPESUPPERCASE=false ;;
+                types.next) ARGPARSERTYPESNEXT=true ;;
+                types.in_description) ARGPARSERTYPESNEXT=false ;;
                 esac
               done
               ;;
